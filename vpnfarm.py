@@ -52,7 +52,7 @@ class FarmClient(object):
 
   def get_pid(self):
     # Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
-    pid_command = subprocess.Popen("ps aux | grep openvpn | grep -v grep | awk '{print $2}'",
+    pid_command = subprocess.Popen("ps aux | grep 'openvpn ' | grep -v grep | awk '{print $2}'",
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
