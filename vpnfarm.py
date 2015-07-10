@@ -34,12 +34,31 @@ class FarmServer(object):
   def get_pid(self):
     # Our VPN server uses openvpn access server. This should be changed in case of a different VPN 'engine':
     pid_command = subprocess.Popen('AUXPID=$(cat /var/run/openvpnas.pid); if [ "$(ps aux | grep $AUXPID | grep -v grep)" != "" ]; then echo $AUXPID; fi', 
-    #pid_command = subprocess.Popen('AUXPID=00000000; if [ "$(ps aux | grep $AUXPID | grep -v grep)" != "" ]; then echo $AUXPID; fi', 
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
     pid, err = pid_command.communicate()    
     return pid.rstrip()
+
+class FarmClient(object):
+  def __init__(self):
+    self.pid = self.get_pid()
+    if self.pid == "":
+      print "The VPN Client is not running! Please start the service first."
+      return
+    else:
+      print("the pid is "+ self.pid)
+
+
+  def get_pid(self):
+    # Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
+    pid_command = subprocess.Popen("ps aux | grep openvpn | grep -v grep | awk '{print $2}'",
+                           shell=True,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    pid, err = pid_command.communicate()
+    return pid.rstrip()
+
 
 
 def show_error():
@@ -52,7 +71,7 @@ if __name__ == '__main__':
     if (mode == 'server'):
       instance = FarmServer() 
     elif (mode == 'client'):
-      print 'clienting'
+      instance = FarmClient()
     else:
       show_error()
   except(IndexError):
