@@ -49,7 +49,7 @@ class FarmClient(object):
     else:
       print("the pid is "+ self.pid)
 
-  # TODO: this gets more than one result? check it!
+
   def get_pid(self):
     # Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
     pid_command = subprocess.Popen("ps aux | grep 'openvpn ' | grep -v grep | awk '{print $2}'",
