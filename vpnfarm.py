@@ -5,7 +5,7 @@
 #    VPN UP/DOWN
 #    client1 IP1 oldIP1
 
-import json, subprocess, sys
+import json, pty, os, subprocess, sys
 
 class VPNStatus(object):
   def __init__(self):
@@ -23,7 +23,7 @@ class VPNStatus(object):
 
 
 class FarmServer(object):
-  def __init__(self):
+  def __init__(self,mode):
     self.pid = self.get_pid()
     if self.pid == "":
       print "The VPN Server is not running! Please start the service first."
@@ -41,14 +41,13 @@ class FarmServer(object):
     return pid.rstrip()
 
 class FarmClient(object):
-  def __init__(self):
+  def __init__(self,mode):
     self.pid = self.get_pid()
     if self.pid == "":
       print "The VPN Client is not running! Please start the service first."
-      return
-    else:
-      print("the pid is "+ self.pid)
-
+      self.start_newclient()
+      print('new pid: ' + self.get_pid())
+      #return
 
   def get_pid(self):
     # Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
@@ -59,19 +58,33 @@ class FarmClient(object):
     pid, err = pid_command.communicate()
     return pid.rstrip()
 
-
+  def start_newclient(self):
+    master, slave = pty.openpty()
+    start_command = subprocess.Popen('/usr/sbin/openvpn /etc/openvpn/client_vpnfarm.ovpn > /etc/openvpn/openvpn.log &',
+                           #shell=True, stdin=subprocess.PIPE, stdout=slave, stderr=slave, close_fds=True)
+                           shell=True, stdout=slave, stderr=slave, close_fds=True)
+    result = os.fdopen(master)
 
 def show_error():
   print('SYNTAX ERROR! ')
-  print(sys.argv[0] + ' [server|client]')
+  print(sys.argv[0] + ' [server|client] <mode>')
+  print('        , where mode can be')
+  print('        1.- for the SERVER machine:')
+  print('          - <nothing>, also known as auto-mode. The client makes himself available to the openvpn server.')
+  print('        2.- for the CLIENT machine:')
+  print('          - <nothing>, again known as auto-mode. The server gets everything ready for the clients that are connected.')
 
 if __name__ == '__main__':
   try:
-    mode = sys.argv[1]
-    if (mode == 'server'):
-      instance = FarmServer() 
-    elif (mode == 'client'):
-      instance = FarmClient()
+    machine = sys.argv[1]
+    try:
+      mode = sys.argv[2] 
+    except(IndexError):
+      mode = ""
+    if (machine == 'server'):
+      instance = FarmServer(mode) 
+    elif (machine == 'client'):
+      instance = FarmClient(mode)
     else:
       show_error()
   except(IndexError):
