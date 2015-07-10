@@ -24,12 +24,18 @@ class VPNStatus(object):
 
 class FarmServer(object):
   def __init__(self,mode):
+    # Default: check that everything is working fine
+    if mode = "":
+      do_check_and_connect()
+
+  def do_check_and_connect(self)
     self.pid = self.get_pid()
     if self.pid == "":
-      print "The VPN Server is not running! Please start the service first."
-      return
-    else:
-      print("the pid is "+ self.pid)
+#####TODO: Start the server
+        print "The VPN Server is not running! Please start the service first."
+        return
+#####TODO: Add more options
+
 
   def get_pid(self):
     # Our VPN server uses openvpn access server. This should be changed in case of a different VPN 'engine':
@@ -42,6 +48,7 @@ class FarmServer(object):
 
 class FarmClient(object):
   def __init__(self,mode):
+#####TODO: Reorder like server
     self.pid = self.get_pid()
     if self.pid == "":
       print "The VPN Client is not running! Please start the service first."
