@@ -73,13 +73,49 @@ class FarmServer(object):
 
 class FarmClient(object):
   def __init__(self,mode):
-#####TODO: Reorder like server
+    # Default: check that everything is working fine
+    if mode == '':
+      self.do_check_and_connect()
+    elif mode == 'stop':
+      self.do_stop()
+
+  def do_check_and_connect(self):
     self.pid = self.get_pid()
     if self.pid == "":
-      print "The VPN Client is not running! Please start the service first."
-      self.start_newclient()
-      print('new pid: ' + self.get_pid())
-      #return
+      master, slave = pty.openpty()
+      start_command = subprocess.Popen('/usr/sbin/openvpn /etc/openvpn/client_vpnfarm.ovpn > /etc/openvpn/openvpn.log &',
+                           shell=True, stdout=slave, stderr=slave, close_fds=True)
+      result = os.fdopen(master)
+      start_pid = self.get_pid()   
+      print('The VPN Server was not running! The new PID is ' + start_pid)
+      return
+
+  def do_stop(self):
+    self.pid = self.get_pid()
+    if self.pid == "":
+      print('The VPN Server was not running! (nothing had to be stopped)')
+      return
+    else:
+      stop_command = subprocess.Popen('kill ' + self.pid + ' && sleep 1s',
+                           shell=True,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+      stop_result, stop_err = stop_command.communicate() 
+      stop_pid = self.get_pid()   
+      if stop_pid == '':
+        print('The VPN Server has been stopped!')
+      else:
+        print('Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
+        print(stop_pid)
+        print('see?')
+      return
+#####TODO: Add more options
+
+  def start_newclient(self):
+    master, slave = pty.openpty()
+    start_command = subprocess.Popen('/usr/sbin/openvpn /etc/openvpn/client_vpnfarm.ovpn > /etc/openvpn/openvpn.log &',
+                           shell=True, stdout=slave, stderr=slave, close_fds=True)
+    result = os.fdopen(master)
 
   def get_pid(self):
     # Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
@@ -90,11 +126,6 @@ class FarmClient(object):
     pid, err = pid_command.communicate()
     return pid.rstrip()
 
-  def start_newclient(self):
-    master, slave = pty.openpty()
-    start_command = subprocess.Popen('/usr/sbin/openvpn /etc/openvpn/client_vpnfarm.ovpn > /etc/openvpn/openvpn.log &',
-                           shell=True, stdout=slave, stderr=slave, close_fds=True)
-    result = os.fdopen(master)
 
 def show_error():
   print('SYNTAX ERROR! ')
