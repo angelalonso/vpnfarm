@@ -7,28 +7,17 @@
 
 import datetime, json, pty, os, subprocess, sys
 
-class VPNStatus(object):
-  def __init__(self):
-    process = subprocess.Popen("/usr/local/openvpn_as/scripts/sacli VPNStatus", shell=True,
-                           stdout=subprocess.PIPE, 
-                           stderr=subprocess.PIPE)
-    out, err = process.communicate()
-    self.result = json.loads(out)
-
-  def show_clients(self):
-    for entry in self.result:
-      client = self.result[entry]["client_list"]
-      if client:
-        print client
-
 
 class FarmServer(object):
   def __init__(self,mode):
     # Default: check that everything is working fine
     if mode == '':
       self.do_check_and_connect()
+    elif mode == 'list':
+      self.get_connectedclients()
     elif mode == 'stop':
       self.do_stop()
+    
 
   def do_check_and_connect(self):
     self.pid = self.get_pid()
@@ -62,7 +51,6 @@ class FarmServer(object):
       else:
         print(ts + ' - Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
       return
-#####TODO: Add more options
 
 
   def get_pid(self):
@@ -73,6 +61,20 @@ class FarmServer(object):
                            stderr=subprocess.PIPE)
     pid, err = pid_command.communicate()    
     return pid.rstrip()
+
+  def get_status(self):
+    status_process = subprocess.Popen("/usr/local/openvpn_as/scripts/sacli VPNStatus", shell=True,
+                           stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE)
+    status_out, status_err = status_process.communicate()
+    return json.loads(status_out)
+
+  def get_connectedclients(self):
+    current_status = self.get_status()
+    for entry in current_status:
+      client = current_status[entry]["client_list"]
+      if client:
+        print client
 
 class FarmClient(object):
   def __init__(self,mode):
