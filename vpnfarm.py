@@ -5,7 +5,7 @@
 #    VPN UP/DOWN
 #    client1 IP1 oldIP1
 
-import json, pty, os, subprocess, sys
+import datetime, json, pty, os, subprocess, sys
 
 class VPNStatus(object):
   def __init__(self):
@@ -38,14 +38,16 @@ class FarmServer(object):
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
       start_result, start_err = start_command.communicate() 
-      start_pid = self.get_pid()   
-      print('The VPN Server was not running! The new PID is ' + start_pid)
+      start_pid = self.get_pid()
+      ts = str(datetime.datetime.now()).split('.')[0]
+      print(ts + ' - The VPN Server was not running! The new PID is ' + start_pid)
       return
 
   def do_stop(self):
     self.pid = self.get_pid()
     if self.pid == "":
-      print('The VPN Server was not running! (nothing had to be stopped)')
+      ts = str(datetime.datetime.now()).split('.')[0]
+      print(ts + ' - The VPN Server was not running! (nothing had to be stopped)')
       return
     else:
       start_command = subprocess.Popen('/etc/init.d/openvpnas stop',
@@ -54,10 +56,11 @@ class FarmServer(object):
                            stderr=subprocess.PIPE)
       start_result, start_err = start_command.communicate() 
       start_pid = self.get_pid()   
+      ts = str(datetime.datetime.now()).split('.')[0]
       if start_pid == '':
-        print('The VPN Server has been stopped!')
+        print(ts + ' - The VPN Server has been stopped!')
       else:
-        print('Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
+        print(ts + ' - Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
       return
 #####TODO: Add more options
 
@@ -87,13 +90,15 @@ class FarmClient(object):
                            shell=True, stdout=slave, stderr=slave, close_fds=True)
       result = os.fdopen(master)
       start_pid = self.get_pid()   
-      print('The VPN Server was not running! The new PID is ' + start_pid)
+      ts = str(datetime.datetime.now()).split('.')[0]
+      print(ts + ' - The VPN Server was not running! The new PID is ' + start_pid)
       return
 
   def do_stop(self):
     self.pid = self.get_pid()
+    ts = str(datetime.datetime.now()).split('.')[0]
     if self.pid == "":
-      print('The VPN Server was not running! (nothing had to be stopped)')
+      print(ts + ' - The VPN Server was not running! (nothing had to be stopped)')
       return
     else:
       stop_command = subprocess.Popen('kill ' + self.pid + ' && sleep 1s',
@@ -103,11 +108,10 @@ class FarmClient(object):
       stop_result, stop_err = stop_command.communicate() 
       stop_pid = self.get_pid()   
       if stop_pid == '':
-        print('The VPN Server has been stopped!')
+        print(ts + ' - The VPN Server has been stopped!')
       else:
-        print('Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
-        print(stop_pid)
-        print('see?')
+        print(ts + ' - Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
+        print(ts + ' - ' + stop_pid + '<- see? this is the PID')
       return
 #####TODO: Add more options
 
