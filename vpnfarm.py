@@ -101,7 +101,7 @@ class FarmClient(object):
       print(ts + ' - The VPN Server was not running! (nothing had to be stopped)')
       return
     else:
-      stop_command = subprocess.Popen('kill ' + self.pid + ' && sleep 1s',
+      stop_command = subprocess.Popen('kill ' + self.pid + ' && sleep 2s',
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
