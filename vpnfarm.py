@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
 ## VPN Farm script for both the server and its clients
-#    Without parameters, it should give back the following:
-#    VPN UP/DOWN
-#    client1 IP1 oldIP1
+#    Without indicating a mode, it should start the daemon and get it ready
 
-import datetime, json, pty, os, subprocess, sys
+## ATTENTION:
+# Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
+
+import datetime, json, pty, os, subprocess, sys, time
 
 #### Global variables
 
@@ -13,8 +14,9 @@ import datetime, json, pty, os, subprocess, sys
 #   Each clients stores a list of "Service - Port" at the server after connecting
 #     It also cleans up old items
 #   The server reads that list and makes sure the ports are open (if the client is still there)
-channel_list = '/home/vpnfarm/channels.json'
+channel_list = '/home/vpnfarm/channelsjson'
 
+server_url = 'fonseca.de.com'
 
 ####  SERVER  ####
 ##################
@@ -119,6 +121,8 @@ class FarmClient(object):
       start_pid = self.get_pid()   
       if start_pid != "":
         print_ts('The VPN Client was not running! The new PID is ' + start_pid)
+        # We need to wait a second or two, to let everything get configured
+        time.sleep(3)
         self.do_register_services()
         return
       else:
@@ -137,11 +141,13 @@ class FarmClient(object):
       print_ts('The VPN Client was not running! (nothing had to be stopped)')
       return
     else:
-      stop_command = subprocess.Popen('kill ' + self.pid + ' && sleep 2s',
+      #stop_command = subprocess.Popen('kill ' + self.pid + ' && sleep 2s',
+      stop_command = subprocess.Popen('kill ' + self.pid ,
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
-      stop_result, stop_err = stop_command.communicate() 
+      stop_result, stop_err = stop_command.communicate()
+      time.sleep(2)
       stop_pid = self.get_pid()   
       if stop_pid == '':
         print_ts('The VPN Client has been stopped!')
@@ -151,19 +157,28 @@ class FarmClient(object):
       return
 
   def do_register_services(self):
-    pass
+    vpn_client_ip = self.get_vpnclient_ip()
+    command = 'scp -i /home/vpnfarm/.ssh/id_rsa ' + channel_list + ' vpnfarm@' + server_url + ':' + channel_list + '_' + vpn_client_ip
+    copy2server_command = subprocess.Popen(command,
+                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    copy2server, copy2server_err = copy2server_command.communicate()
     
     
 ## Information to get ##
 
   def get_pid(self):
-    # Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
     pid_command = subprocess.Popen("ps aux | grep 'openvpn ' | grep -v grep | awk '{print $2}'",
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-    pid, err = pid_command.communicate()
+                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pid, pid_err = pid_command.communicate()
     return pid.rstrip()
+
+  def get_vpnclient_ip(self):
+    vpnip_command = subprocess.Popen("ifconfig tun0 | grep ' addr:'",
+                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    vpnip_result, vpnip_err = vpnip_command.communicate()
+    # Not using re.split here, to avoid format issues 
+    vpnip = vpnip_result.split()[1].split(':')[1]
+    return vpnip
 
 
 
