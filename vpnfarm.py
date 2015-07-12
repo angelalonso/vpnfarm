@@ -7,6 +7,17 @@
 
 import datetime, json, pty, os, subprocess, sys
 
+#### Global variables
+
+# This channel list works as follows:
+#   Each clients stores a list of "Service - Port" at the server after connecting
+#     It also cleans up old items
+#   The server reads that list and makes sure the ports are open (if the client is still there)
+channel_list = '/home/vpnfarm/channels.json'
+
+
+####  SERVER  ####
+##################
 
 class FarmServer(object):
   def __init__(self,mode):
@@ -17,26 +28,32 @@ class FarmServer(object):
       self.get_connectedclients()
     elif mode == 'stop':
       self.do_stop()
-    
+
+## Actions to take ##
 
   def do_check_and_connect(self):
     self.pid = self.get_pid()
     if self.pid == "":
-      start_command = subprocess.Popen('/etc/init.d/openvpnas start',
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-      start_result, start_err = start_command.communicate() 
+      self.do_start()
       start_pid = self.get_pid()
-      ts = str(datetime.datetime.now()).split('.')[0]
-      print(ts + ' - The VPN Server was not running! The new PID is ' + start_pid)
-      return
+      if start_pid != "":
+        print_ts('The VPN Server was not running! The new PID is ' + start_pid)
+        self.do_connect_services()
+        return
+      else:
+        print_ts('ERROR! The VPN Server was not running, AND it could not be started either!')
+        return
+
+
+  def do_start(self):
+    start_command = subprocess.Popen('/etc/init.d/openvpnas start',
+                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    start_result, start_err = start_command.communicate()
 
   def do_stop(self):
     self.pid = self.get_pid()
     if self.pid == "":
-      ts = str(datetime.datetime.now()).split('.')[0]
-      print(ts + ' - The VPN Server was not running! (nothing had to be stopped)')
+      print_ts('The VPN Server was not running! (nothing had to be stopped)')
       return
     else:
       start_command = subprocess.Popen('/etc/init.d/openvpnas stop',
@@ -45,13 +62,19 @@ class FarmServer(object):
                            stderr=subprocess.PIPE)
       start_result, start_err = start_command.communicate() 
       start_pid = self.get_pid()   
-      ts = str(datetime.datetime.now()).split('.')[0]
       if start_pid == '':
-        print(ts + ' - The VPN Server has been stopped!')
+        print_ts('The VPN Server has been stopped!')
       else:
-        print(ts + ' - Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
+        print_ts('Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
       return
 
+  def do_connect_services(self):
+    with open(channel_list) as data_file:    
+      data = json.load(data_file)
+    print(data["clients"])
+    
+
+## Information to get ##
 
   def get_pid(self):
     # Our VPN server uses openvpn access server. This should be changed in case of a different VPN 'engine':
@@ -76,6 +99,9 @@ class FarmServer(object):
       if client:
         print client
 
+####  CLIENT  ####
+##################
+
 class FarmClient(object):
   def __init__(self,mode):
     # Default: check that everything is working fine
@@ -84,23 +110,31 @@ class FarmClient(object):
     elif mode == 'stop':
       self.do_stop()
 
+## Actions to take ##
+
   def do_check_and_connect(self):
     self.pid = self.get_pid()
     if self.pid == "":
-      master, slave = pty.openpty()
-      start_command = subprocess.Popen('/usr/sbin/openvpn /etc/openvpn/client_vpnfarm.ovpn > /etc/openvpn/openvpn.log &',
-                           shell=True, stdout=slave, stderr=slave, close_fds=True)
-      result = os.fdopen(master)
+      self.do_start()
       start_pid = self.get_pid()   
-      ts = str(datetime.datetime.now()).split('.')[0]
-      print(ts + ' - The VPN Server was not running! The new PID is ' + start_pid)
-      return
+      if start_pid != "":
+        print_ts('The VPN Client was not running! The new PID is ' + start_pid)
+        self.do_register_services()
+        return
+      else:
+        print_ts('ERROR! The VPN Client was not running, AND it could not be started either!')
+        return
+
+  def do_start(self):
+    master, slave = pty.openpty()
+    start_command = subprocess.Popen('/usr/sbin/openvpn /etc/openvpn/client_vpnfarm.ovpn > /etc/openvpn/openvpn.log &',
+                           shell=True, stdout=slave, stderr=slave, close_fds=True)
+    result = os.fdopen(master)
 
   def do_stop(self):
     self.pid = self.get_pid()
-    ts = str(datetime.datetime.now()).split('.')[0]
     if self.pid == "":
-      print(ts + ' - The VPN Server was not running! (nothing had to be stopped)')
+      print_ts('The VPN Client was not running! (nothing had to be stopped)')
       return
     else:
       stop_command = subprocess.Popen('kill ' + self.pid + ' && sleep 2s',
@@ -110,18 +144,17 @@ class FarmClient(object):
       stop_result, stop_err = stop_command.communicate() 
       stop_pid = self.get_pid()   
       if stop_pid == '':
-        print(ts + ' - The VPN Server has been stopped!')
+        print_ts('The VPN Client has been stopped!')
       else:
-        print(ts + ' - Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
-        print(ts + ' - ' + stop_pid + '<- see? this is the PID')
+        print_ts('Something weird happened, the VPN Client has been stopped but some processes are still running. PLEASE CHECK!')
+        print_ts(stop_pid + '<- see? this is the PID')
       return
-#####TODO: Add more options
 
-  def start_newclient(self):
-    master, slave = pty.openpty()
-    start_command = subprocess.Popen('/usr/sbin/openvpn /etc/openvpn/client_vpnfarm.ovpn > /etc/openvpn/openvpn.log &',
-                           shell=True, stdout=slave, stderr=slave, close_fds=True)
-    result = os.fdopen(master)
+  def do_register_services(self):
+    pass
+    
+    
+## Information to get ##
 
   def get_pid(self):
     # Our VPN client uses openvpn. This should be changed in case of a different VPN 'engine':
@@ -133,15 +166,25 @@ class FarmClient(object):
     return pid.rstrip()
 
 
+
+####       MAIN
+
 def show_error():
   print('SYNTAX ERROR! ')
   print(sys.argv[0] + ' [server|client] <mode>')
   print('        , where mode can be')
   print('        1.- for the SERVER machine:')
   print('          - <nothing>, also known as auto-mode. The server gets everything ready for the clients that are connected.')
+  print('          - list, show a list (JSON) of all clients connected.')
   print('          - stop, the server gets stopped if it\'s running.')
   print('        2.- for the CLIENT machine:')
   print('          - <nothing>, again, auto-mode. The client makes himself available to the openvpn server.')
+  print('          - stop, the client gets stopped if it\'s running.')
+
+def print_ts(message):
+  ts = str(datetime.datetime.now()).split('.')[0]
+  print(ts + ' - ' + message)
+
 
 if __name__ == '__main__':
   try:
@@ -158,6 +201,3 @@ if __name__ == '__main__':
       show_error()
   except(IndexError):
    show_error()
-  #current_status = VPNStatus()
-
-  #current_status.show_clients()
