@@ -33,6 +33,9 @@ class FarmServer(object):
       self.get_connectedclients()
     elif mode == 'stop':
       self.do_stop()
+    elif mode == 'restart':
+      self.do_stop()
+      self.do_check_and_connect()
 
 ## Actions to take ##
 
@@ -73,19 +76,25 @@ class FarmServer(object):
         print_ts('Something weird happened, the VPN Server has been stopped but some processes are still running. PLEASE CHECK!')
       return
 
-  def do_connect_services(self):
-    self.channelnames = []
-    self.channeladdresses = [] 
+  def do_read_services(self):
+    self.portchannels = {}
+    channel_localport = 8040 
     allfiles = [ f for f in os.listdir(channel_list_folder) if os.path.isfile(os.path.join(channel_list_folder,f)) ]
     for filename in allfiles:
       if channel_list_template in filename:
         with open(channel_list_folder + '/' + filename) as data_file:    
           data = json.load(data_file)
           channel_ip = filename.replace(channel_list_template,'').replace('_','')
-          for entry in data["channels"]:
-            print(channel_ip + ':' + data["channels"][entry])
-            print(entry)
-    
+          if (channel_ip != ''): 
+            for entry in data["channels"]:
+              channel_remote = channel_ip + ':' + entry + ':' + data["channels"][entry]
+              channel_localport += 1
+              self.portchannels[channel_localport] = channel_remote
+ 
+  def do_connect_services(self):
+    self.do_read_services()
+    ##TODO: load default ifconfig, then open one after the other.
+
 
 ## Information to get ##
 
@@ -122,6 +131,9 @@ class FarmClient(object):
       self.do_check_and_connect()
     elif mode == 'stop':
       self.do_stop()
+    elif mode == 'restart':
+      self.do_stop()
+      self.do_check_and_connect()
 
 ## Actions to take ##
 
@@ -200,12 +212,14 @@ def show_error():
   print(sys.argv[0] + ' [server|client] <mode>')
   print('        , where mode can be')
   print('        1.- for the SERVER machine:')
-  print('          - <nothing>, also known as auto-mode. The server gets everything ready for the clients that are connected.')
-  print('          - list, show a list (JSON) of all clients connected.')
-  print('          - stop, the server gets stopped if it\'s running.')
+  print('          - <nothing> also known as auto-mode. The server gets everything ready for the clients that are connected.')
+  print('          - list      show a list (JSON) of all clients connected.')
+  print('          - stop      the server gets stopped if it\'s running.')
+  print('          - restart   the server gets stopped, then up and running again.')
   print('        2.- for the CLIENT machine:')
-  print('          - <nothing>, again, auto-mode. The client makes himself available to the openvpn server.')
-  print('          - stop, the client gets stopped if it\'s running.')
+  print('          - <nothing> again, auto-mode. The client makes himself available to the openvpn server.')
+  print('          - stop      the client gets stopped if it\'s running.')
+  print('          - restart   the client gets stopped, then up and running again.')
 
 def print_ts(message):
   ts = str(datetime.datetime.now()).split('.')[0]
