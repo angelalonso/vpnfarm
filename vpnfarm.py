@@ -74,10 +74,17 @@ class FarmServer(object):
       return
 
   def do_connect_services(self):
+    self.channelnames = []
+    self.channeladdresses = [] 
     allfiles = [ f for f in os.listdir(channel_list_folder) if os.path.isfile(os.path.join(channel_list_folder,f)) ]
     for filename in allfiles:
       if channel_list_template in filename:
-        print filename    
+        with open(channel_list_folder + '/' + filename) as data_file:    
+          data = json.load(data_file)
+          channel_ip = filename.replace(channel_list_template,'').replace('_','')
+          for entry in data["channels"]:
+            print(channel_ip + ':' + data["channels"][entry])
+            print(entry)
     
 
 ## Information to get ##
