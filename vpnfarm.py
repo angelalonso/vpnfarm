@@ -14,7 +14,10 @@ import datetime, json, pty, os, subprocess, sys, time
 #   Each clients stores a list of "Service - Port" at the server after connecting
 #     It also cleans up old items
 #   The server reads that list and makes sure the ports are open (if the client is still there)
-channel_list = '/home/vpnfarm/channelsjson'
+
+channel_list_folder = '/home/vpnfarm'
+channel_list_template = 'channelsjson'
+channel_list = channel_list_folder + '/' + channel_list_template
 
 server_url = 'fonseca.de.com'
 
@@ -71,9 +74,10 @@ class FarmServer(object):
       return
 
   def do_connect_services(self):
-    with open(channel_list) as data_file:    
-      data = json.load(data_file)
-    print(data["clients"])
+    allfiles = [ f for f in os.listdir(channel_list_folder) if os.path.isfile(os.path.join(channel_list_folder,f)) ]
+    for filename in allfiles:
+      if channel_list_template in filename:
+        print filename    
     
 
 ## Information to get ##
