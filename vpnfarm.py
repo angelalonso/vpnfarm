@@ -19,7 +19,8 @@ channel_list_folder = '/home/vpnfarm'
 channel_list_template = 'channelsjson'
 channel_list = channel_list_folder + '/' + channel_list_template
 
-server_url = 'fonseca.de.com'
+#server_url = 'fonseca.de.com'
+server_url = '85.214.251.58'
 
 ####  SERVER  ####
 ##################
@@ -94,6 +95,14 @@ class FarmServer(object):
   def do_connect_services(self):
     self.do_read_services()
     ##TODO: load default ifconfig, then open one after the other.
+    ##      SINCE it does not seem to work from here, I'll just inform the user 
+    ##    (yes, I know this is cheap)
+    print('ATTENTION: You\'ll have to open the related ports! Copy and paste the following:i\n')
+    print('/sbin/iptables-restore < /root/vpnfarm/iptables_base')
+    for port in self.portchannels:
+      dest_ip = self.portchannels[port].split(':')[0]
+      dest_port = self.portchannels[port].split(':')[2]
+      print('iptables -t nat -A PREROUTING -p tcp -d ' + server_url + ' --dport ' + str(port) + ' -j DNAT --to-destination ' + dest_ip + ':' + dest_port)
 
 
 ## Information to get ##
@@ -225,6 +234,18 @@ def print_ts(message):
   ts = str(datetime.datetime.now()).split('.')[0]
   print(ts + ' - ' + message)
 
+def check_output(*popenargs, **kwargs):
+    if 'stdout' in kwargs:
+        raise ValueError('stdout argument not allowed, it will be overridden.')
+    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    output, unused_err = process.communicate()
+    retcode = process.poll()
+    if retcode:
+        cmd = kwargs.get("args")
+        if cmd is None:
+            cmd = popenargs[0]
+        raise subprocess.CalledProcessError(retcode, cmd)
+    return output
 
 if __name__ == '__main__':
   try:
